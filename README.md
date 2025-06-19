@@ -1,6 +1,6 @@
-# TGift-Sniper
-
 <div align="center">
+
+# TGift-Sniper
 
 **Бот для авто-покупки новых лимитированных подарков Telegram**
 
