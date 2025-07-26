@@ -11,17 +11,18 @@ from src.core.exceptions import PurchaseError, InsufficientBalanceError
 
 class GiftBuyer:
     
-    def __init__(self, client: Client, target_username: str):
+    def __init__(self, client: Client, target_usernames: list[str]):
         self.client = client
-        self.target_username = target_username.lstrip('@')
+        self.target_usernames = [username.lstrip('@') for username in target_usernames]
         self._stars_balance: int = 0
+        self._current_index: int = 0
     
     
     async def initialize(self) -> bool:
         try:
             self._stars_balance = await self.client.get_stars_balance()
             logger.info(
-                f"[Buyer] Инициализирован. Цель: {self.target_username}, "
+                f"[Buyer] Инициализирован. Целей: {len(self.target_usernames)}, "
                 f"Баланс: {self._stars_balance} Stars"
             )
             return True
@@ -40,22 +41,25 @@ class GiftBuyer:
     
 
     async def buy_gift(self, gift_id: int, quantity: int = 1) -> Tuple[bool, str]:
-        if not self.target_username:
-            return False, "Цель не инициализирована"
+        if not self.target_usernames:
+            return False, "Цели не инициализированы"
         
         success_count = 0
         last_error = ""
         
         for i in range(quantity):
             try:
+                target = self.target_usernames[self._current_index]
+                self._current_index = (self._current_index + 1) % len(self.target_usernames)
+                
                 await self.client.send_gift(
-                    chat_id=self.target_username,
+                    chat_id=target,
                     gift_id=gift_id,
                     hide_my_name=True
                 )
                 success_count += 1
                 logger.success(
-                    f"[Buyer] Подарок {gift_id} отправлен ({i+1}/{quantity})"
+                    f"[Buyer] Подарок {gift_id} отправлен на {target} ({i+1}/{quantity})"
                 )
                 
                 if i < quantity - 1:
@@ -65,8 +69,10 @@ class GiftBuyer:
                 logger.warning(f"[Buyer] FloodWait: {e.value} сек")
                 await asyncio.sleep(e.value)
                 try:
+                    target = self.target_usernames[self._current_index]
+                    self._current_index = (self._current_index + 1) % len(self.target_usernames)
                     await self.client.send_gift(
-                        chat_id=self.target_username,
+                        chat_id=target,
                         gift_id=gift_id,
                         hide_my_name=True
                     )

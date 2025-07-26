@@ -22,7 +22,7 @@ class GiftMonitor:
     
     def __init__(self, buyer_client: Client, hunter_clients: List[Client], 
                  criteria: List[GiftCriteria], notification_bot: Optional[NotificationBot] = None):
-        self.buyer = GiftBuyer(buyer_client, config.TARGET_USERNAME)
+        self.buyer = GiftBuyer(buyer_client, config.TARGET_USERNAMES)
         self.hunters = [GiftHunter(client, idx) for idx, client in enumerate(hunter_clients)]
         
         self.purchase_manager = PurchaseManager(

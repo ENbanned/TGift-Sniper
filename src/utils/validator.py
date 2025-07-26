@@ -54,8 +54,8 @@ class ConfigValidator:
             if bot_creds and not bot_creds.get('is_bot'):
                 errors.append(f"Сессия {config.BOT_SESSION} не является ботом")
 
-        if not config.TARGET_USERNAME:
-            errors.append("TARGET_USERNAME должен быть указан")
+        if not hasattr(config, 'TARGET_USERNAMES') or not config.TARGET_USERNAMES:
+            errors.append("TARGET_USERNAMES должен быть указан и содержать хотя бы один канал")
         
         if not config.PURCHASE_CRITERIA:
             errors.append("PURCHASE_CRITERIA не может быть пустым")
