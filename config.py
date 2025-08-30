@@ -4,11 +4,9 @@
 # названия файлов сессий с которых будут покупаться подарки (с звездами) (из папки sessions)
 # эти аккаунты будут использоваться для покупки подарков
 BUYER_SESSIONS: list[str] = [
-    "buyer_enbanned",
-    "hunter_akalns_2",
-    "hunter_goolenok_7", 
-    "hunter_kentofarikf_1",
-    "hunter_kenyssa_3"
+    "session_one",
+    "session_two"
+
     # добавьте столько аккаунтов-покупателей, сколько нужно
 ]
 
@@ -21,39 +19,27 @@ USE_BUYERS_AS_HUNTERS: bool = True
 # если USE_BUYERS_AS_HUNTERS = True, то можете оставить пустым список
 # если USE_BUYERS_AS_HUNTERS = False, то обязательно добавьте хотя бы одного охотника
 HUNTER_SESSIONS: list[str] = [
-    # "hunter_akalns_2",
-    # "hunter_goolenok_7", 
-    # "hunter_kentofarikf_1",
-    # "hunter_kenyssa_3"
+    # "session_one",
+    # "session_two"
 ]
 
 # ===============================================================
 # ===============================================================
 
 # название файла сессии телеграм бота в который будут приходить уведомления (из папки sessions)
-BOT_SESSION: str = "notification_bot"
+BOT_SESSION: str = "your_bot_session_name"
 
 # ID вашего чата или же вашей лички куда бот будет отправлять уведомления. Можно получить здесь - @getmyid_bot
-LOG_CHAT_ID: int = 891879512
+LOG_CHAT_ID: int = 123456
 
 # ===============================================================
 # ===============================================================
 
 # юзернеймы каналов/пользователей на которые будут покупаться подарки
 TARGET_USERNAMES: list[str] = [
-    'vdbddid',
-    'ZRhMGEy',
-    'HxdBo5MkhjZDM6',
-    'BIz1oeMgao1Zjli',
-    'NnqVyI6kPdU0MjZi',
-    'BUi6o9YLs2OTYy',
-    'FZybV3R28JoyMmMy',
-    'FFnctRi_LgyYjUy',
-    'xhSEpzx8xNzdi',
-    'lg85MM4_VpiN2Fi',
-    'channel_giftsssx',
-    'Vladyslav_KLIK',
-    'enbanned'
+    'channel_1',
+    'channel_2',
+    'channel_3',
 ]
 
 # ===============================================================
