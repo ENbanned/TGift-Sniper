@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, List, Tuple
 
 from src.core.models import GiftCriteria
-from src.core.constants import FileConstants, Limits
+from src.core.constants import FileConstants
 from src.utils.credentials_manager import CredentialsManager
 from src.utils.logger import logger
 
@@ -13,7 +13,7 @@ class ConfigValidator:
     def validate_all(config: Any) -> Tuple[bool, List[str]]:
         errors = []
         
-        sessions_dir = Path(config.SESSIONS_DIR)
+        sessions_dir = Path(FileConstants.SESSIONS_DIR)
         if not sessions_dir.exists():
             try:
                 sessions_dir.mkdir(parents=True)
@@ -24,26 +24,32 @@ class ConfigValidator:
         credentials_manager = CredentialsManager(sessions_dir)
         
         if not credentials_manager.exists():
-            errors.append("Не найден файл .credentials.json - запустите auth_module.py")
+            errors.append("Не найден файл .credentials.json - запустите auth.py")
         else:
-            buyer_session = sessions_dir / f"{config.BUYER_SESSION}.session"
-            if not buyer_session.exists():
-                errors.append(f"Не найдена сессия покупателя: {config.BUYER_SESSION}")
+            if not config.BUYER_SESSIONS:
+                errors.append("Должен быть указан хотя бы один покупатель в BUYER_SESSIONS")
+            else:
+                missing_buyers = []
+                for buyer_name in config.BUYER_SESSIONS:
+                    buyer_session = sessions_dir / f"{buyer_name}.session"
+                    if not buyer_session.exists():
+                        missing_buyers.append(buyer_name)
+                
+                if missing_buyers:
+                    errors.append(f"Не найдены сессии покупателей: {', '.join(missing_buyers)}")
             
-            missing_hunters = []
-            for hunter_name in config.HUNTER_SESSIONS:
-                hunter_session = sessions_dir / f"{hunter_name}.session"
-                if not hunter_session.exists():
-                    missing_hunters.append(hunter_name)
-            
-            if missing_hunters:
-                errors.append(f"Не найдены сессии охотников: {', '.join(missing_hunters)}")
-            
-            if len(config.HUNTER_SESSIONS) < config.MIN_HUNTERS_COUNT:
-                errors.append(
-                    f"Недостаточно охотников: {len(config.HUNTER_SESSIONS)} < "
-                    f"{config.MIN_HUNTERS_COUNT}"
-                )
+            if not config.USE_BUYERS_AS_HUNTERS:
+                if not config.HUNTER_SESSIONS:
+                    errors.append("Если USE_BUYERS_AS_HUNTERS = False, должен быть хотя бы один охотник")
+                else:
+                    missing_hunters = []
+                    for hunter_name in config.HUNTER_SESSIONS:
+                        hunter_session = sessions_dir / f"{hunter_name}.session"
+                        if not hunter_session.exists():
+                            missing_hunters.append(hunter_name)
+                    
+                    if missing_hunters:
+                        errors.append(f"Не найдены сессии охотников: {', '.join(missing_hunters)}")
 
         if config.BOT_SESSION:
             bot_session_file = sessions_dir / f"{config.BOT_SESSION}.session"
@@ -79,6 +85,9 @@ class ConfigValidator:
         if config.MIN_STARS_BALANCE < 0:
             errors.append("MIN_STARS_BALANCE не может быть отрицательным")
         
+        if config.CHECK_INTERVAL <= 0:
+            errors.append("CHECK_INTERVAL должен быть больше 0")
+        
         return len(errors) == 0, errors
     
 
@@ -97,4 +106,3 @@ class ConfigValidator:
             criteria_list.append(criteria)
         
         return criteria_list
-    

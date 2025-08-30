@@ -2,7 +2,6 @@ import time
 from typing import List, Dict, Any
 
 from src.core.models import MonitorStats
-from src.core.constants import TimeConstants
 from src.services.hunter import GiftHunter
 from src.services.buyer import GiftBuyer
 from src.utils import logger
@@ -14,13 +13,10 @@ class StatsManager:
         self._total_checks = 0
         self._last_check_count = 0
         self._last_check_time = time.time()
-        self._degradation_check_time = time.time()
-        self._degradation_check_count = 0
     
 
     def increment_checks(self) -> None:
         self._total_checks += 1
-        self._degradation_check_count += 1
     
 
     def get_performance_stats(self) -> Dict[str, float]:
@@ -51,35 +47,15 @@ class StatsManager:
         )
     
 
-    def check_degradation(self, min_checks: int = 100) -> bool:
-        current_time = time.time()
-        time_elapsed = current_time - self._degradation_check_time
-        
-        if time_elapsed < TimeConstants.DEGRADATION_CHECK_INTERVAL:
-            return False
-        
-        if time_elapsed > 0:
-            checks_per_minute = (self._degradation_check_count / time_elapsed) * 60
-        else:
-            checks_per_minute = 0
-        
-        has_degradation = checks_per_minute < 10 and self._total_checks > 100
-        
-        self._degradation_check_time = current_time
-        self._degradation_check_count = 0
-        
-        return has_degradation
-    
-
-    def collect_monitor_stats(self, is_running: bool, buyer: GiftBuyer, 
+    def collect_monitor_stats(self, is_running: bool, buyers: List[GiftBuyer], 
                             hunters: List[GiftHunter], processed_gifts: int) -> MonitorStats:
         hunter_stats = [hunter.get_stats() for hunter in hunters]
+        total_balance = sum(buyer.balance for buyer in buyers)
         
         return MonitorStats(
             running=is_running,
             processed_gifts=processed_gifts,
-            buyer_balance=buyer.balance,
+            buyer_balance=total_balance,
             total_checks=self._total_checks,
             hunters=hunter_stats
         )
-    

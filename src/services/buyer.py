@@ -1,33 +1,34 @@
 import asyncio
-from typing import Tuple
+from typing import Tuple, List
 
 from pyrogram import Client
 from pyrogram.errors import RPCError, FloodWait
 
+import config
 from src.utils import logger
 from src.core.constants import TimeConstants, TelegramConstants
-from src.core.exceptions import PurchaseError, InsufficientBalanceError
 
 
 class GiftBuyer:
     
-    def __init__(self, client: Client, target_usernames: list[str]):
+    def __init__(self, client: Client, target_usernames: List[str], buyer_id: int = 0):
         self.client = client
+        self.buyer_id = buyer_id
         self.target_usernames = [username.lstrip('@') for username in target_usernames]
         self._stars_balance: int = 0
-        self._current_index: int = 0
+        self._current_index: int = buyer_id % len(target_usernames) if target_usernames else 0
     
     
     async def initialize(self) -> bool:
         try:
             self._stars_balance = await self.client.get_stars_balance()
             logger.info(
-                f"[Buyer] Инициализирован. Целей: {len(self.target_usernames)}, "
+                f"[Buyer-{self.buyer_id}] Инициализирован. Целей: {len(self.target_usernames)}, "
                 f"Баланс: {self._stars_balance} Stars"
             )
             return True
         except Exception as e:
-            logger.error(f"[Buyer] Ошибка инициализации: {e}")
+            logger.error(f"[Buyer-{self.buyer_id}] Ошибка инициализации: {e}")
             return False
     
 
@@ -36,8 +37,8 @@ class GiftBuyer:
             self._stars_balance = await self.client.get_stars_balance()
             return self._stars_balance
         except Exception as e:
-            logger.error(f"[Buyer] Ошибка получения баланса: {e}")
-            return 0
+            logger.error(f"[Buyer-{self.buyer_id}] Ошибка получения баланса: {e}")
+            return self._stars_balance
     
 
     async def buy_gift(self, gift_id: int, quantity: int = 1) -> Tuple[bool, str]:
@@ -59,14 +60,14 @@ class GiftBuyer:
                 )
                 success_count += 1
                 logger.success(
-                    f"[Buyer] Подарок {gift_id} отправлен на {target} ({i+1}/{quantity})"
+                    f"[Buyer-{self.buyer_id}] Подарок {gift_id} отправлен на {target} ({i+1}/{quantity})"
                 )
                 
                 if i < quantity - 1:
-                    await asyncio.sleep(TimeConstants.PURCHASE_DELAY)
+                    await asyncio.sleep(config.PURCHASE_DELAY)
                     
             except FloodWait as e:
-                logger.warning(f"[Buyer] FloodWait: {e.value} сек")
+                logger.warning(f"[Buyer-{self.buyer_id}] FloodWait: {e.value} сек")
                 await asyncio.sleep(e.value)
                 try:
                     target = self.target_usernames[self._current_index]
@@ -79,22 +80,22 @@ class GiftBuyer:
                     success_count += 1
                 except Exception as retry_error:
                     last_error = str(retry_error)
-                    logger.error(f"[Buyer] Повторная ошибка: {retry_error}")
+                    logger.error(f"[Buyer-{self.buyer_id}] Повторная ошибка: {retry_error}")
                     
             except RPCError as e:
                 last_error = str(e)
-                logger.error(f"[Buyer] RPC ошибка при покупке: {e}")
+                logger.error(f"[Buyer-{self.buyer_id}] RPC ошибка при покупке: {e}")
                 
                 if TelegramConstants.ERROR_INSUFFICIENT_BALANCE in str(e):
-                    logger.error("[Buyer] Недостаточно Stars!")
-                    raise InsufficientBalanceError("Недостаточно Stars")
+                    logger.error(f"[Buyer-{self.buyer_id}] Недостаточно Stars!")
+                    break
                 elif TelegramConstants.ERROR_GIFT_SOLD_OUT in str(e):
-                    logger.error("[Buyer] Подарок распродан!")
+                    logger.error(f"[Buyer-{self.buyer_id}] Подарок распродан!")
                     break
                     
             except Exception as e:
                 last_error = str(e)
-                logger.error(f"[Buyer] Неожиданная ошибка: {e}")
+                logger.error(f"[Buyer-{self.buyer_id}] Неожиданная ошибка: {e}")
         
         await self.get_balance()
         

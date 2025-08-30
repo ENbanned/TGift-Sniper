@@ -20,7 +20,7 @@ class GiftSniperApp:
         self.notification_bot: Optional[NotificationBot] = None
         self.client_manager = ClientManager(Path(FileConstants.SESSIONS_DIR))
         self._running = False
-        self._clients = {'buyer': None, 'hunters': []}
+        self._clients = {'buyers': [], 'hunters': []}
     
 
     async def validate_config(self) -> bool:
@@ -50,8 +50,9 @@ class GiftSniperApp:
 
     async def start_clients(self) -> bool:
         result = await self.client_manager.create_and_start_clients(
-            buyer_session=config.BUYER_SESSION,
-            hunter_sessions=config.HUNTER_SESSIONS
+            buyer_sessions=config.BUYER_SESSIONS,
+            hunter_sessions=config.HUNTER_SESSIONS,
+            use_buyers_as_hunters=config.USE_BUYERS_AS_HUNTERS
         )
         
         if not result['success']:
@@ -76,7 +77,7 @@ class GiftSniperApp:
         criteria = ConfigValidator.parse_criteria(config)
         
         self.monitor = GiftMonitor(
-            buyer_client=self._clients['buyer'],
+            buyer_clients=self._clients['buyers'],
             hunter_clients=self._clients['hunters'],
             criteria=criteria,
             notification_bot=self.notification_bot
@@ -97,10 +98,6 @@ class GiftSniperApp:
             while self._running:
                 await asyncio.sleep(10)
                 
-                if config.DEBUG_MODE:
-                    stats = self.monitor.get_stats()
-                    logger.debug(f":: Статистика: {stats}")
-                
         except asyncio.CancelledError:
             logger.info("** Получен сигнал остановки")
         
@@ -118,7 +115,7 @@ class GiftSniperApp:
             await self.notification_bot.cleanup()
         
         await self.client_manager.stop_all(
-            self._clients['buyer'], 
+            self._clients['buyers'], 
             self._clients['hunters']
         )
         
@@ -131,7 +128,7 @@ class GiftSniperApp:
 
 
 async def main():
-    setup_logger(debug=config.DEBUG_MODE)
+    setup_logger(debug=False)
     
     app = GiftSniperApp()
     
@@ -142,9 +139,8 @@ async def main():
         await app.run()
     except Exception as e:
         logger.error(f"() Критическая ошибка: {e}")
-        if config.DEBUG_MODE:
-            import traceback
-            traceback.print_exc()
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 

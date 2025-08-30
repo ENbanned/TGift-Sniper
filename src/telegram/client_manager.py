@@ -28,29 +28,34 @@ class ClientManager:
         )
     
 
-    async def create_and_start_clients(self, buyer_session: str, 
-                                     hunter_sessions: List[str]) -> Dict[str, Any]:
+    async def create_and_start_clients(self, buyer_sessions: List[str], 
+                                     hunter_sessions: List[str],
+                                     use_buyers_as_hunters: bool) -> Dict[str, Any]:
         result = {
-            'buyer': None,
+            'buyers': [],
             'hunters': [],
             'success': False
         }
         
-        buyer_client = self.create_client(buyer_session)
-        if not buyer_client:
-            return result
+        for idx, buyer_session in enumerate(buyer_sessions):
+            buyer_client = self.create_client(buyer_session)
+            if not buyer_client:
+                continue
+            
+            try:
+                await buyer_client.start()
+                buyer_info = await buyer_client.get_me()
+                logger.info(
+                    f"Покупатель #{idx+1}: {buyer_info.first_name} "
+                    f"(@{buyer_info.username or 'no_username'})"
+                )
+                result['buyers'].append(buyer_client)
+            except Exception as e:
+                logger.error(f"Ошибка запуска покупателя {buyer_session}: {e}")
         
-        try:
-            await buyer_client.start()
-            buyer_info = await buyer_client.get_me()
-            logger.info(
-                f"Покупатель: {buyer_info.first_name} "
-                f"(@{buyer_info.username or 'no_username'})"
-            )
-            result['buyer'] = buyer_client
-        except Exception as e:
-            logger.error(f"Ошибка запуска покупателя: {e}")
-            return result
+        if use_buyers_as_hunters:
+            result['hunters'].extend(result['buyers'])
+            logger.info(f"Покупатели также используются как охотники ({len(result['buyers'])} шт)")
         
         for idx, hunter_name in enumerate(hunter_sessions):
             await asyncio.sleep(1)
@@ -70,13 +75,15 @@ class ClientManager:
             except Exception as e:
                 logger.error(f"Ошибка запуска охотника {hunter_name}: {e}")
         
-        result['success'] = result['buyer'] is not None and len(result['hunters']) > 0
+        result['success'] = len(result['buyers']) > 0 and len(result['hunters']) > 0
         return result
     
 
-    async def stop_all(self, buyer: Optional[Client], hunters: List[Client]) -> None:
-        if buyer:
-            await buyer.stop()
+    async def stop_all(self, buyers: List[Client], hunters: List[Client]) -> None:
+        stopped = set()
         
-        for client in hunters:
-            await client.stop()
+        for client in buyers + hunters:
+            if id(client) not in stopped:
+                await client.stop()
+                stopped.add(id(client))
+                
